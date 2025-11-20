@@ -1,5 +1,8 @@
 import express from 'express';
 
+  const geminiApiKey=process.env.GEMINI_API_KEY;
+  const aiModelName='gemini-2.5-flash';
+
 const mcqQuestions = [
   {
     question: "Which application-layer protocol lies at the core of the World Wide Web (WWW)?",
@@ -52,6 +55,8 @@ const mcqQuestions = [
     correctAnswer: "Graphical and Text."
   }
 ];
+
+
 
 
 const router=express.Router();
