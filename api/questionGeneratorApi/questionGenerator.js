@@ -1,7 +1,17 @@
 import express from 'express';
+import multer from 'multer';
+import { GoogleGenAI} from '@google/genai';
 
   const geminiApiKey=process.env.GEMINI_API_KEY;
   const aiModelName='gemini-2.5-flash';
+
+  const geminiAI=new GoogleGenAI({apiKey:geminiApiKey});
+
+  const storage=multer.memoryStorage();
+  const uploads=multer({
+    storage:storage,
+    limits:{fileSize:20*1024*1024}
+  });
 
 const mcqQuestions = [
   {
@@ -62,11 +72,75 @@ const mcqQuestions = [
 const router=express.Router();
     
 
-router.post('/',(req,res)=>{
+router.post('/',uploads.single('file-input'),async(req,res)=>{
         try{
-            const data=req.body;
-            console.log("data:",data);
-            return res.status(200).json({questions:mcqQuestions});
+            if(!req.file){
+              res.status(400).json({error:'No document uploaded!'});
+            }
+
+            const fileBuffer=req.file.buffer;
+            const fileBase64=fileBuffer.toString('base64');
+            const fileMimeType=req.file.mimetype;
+            const {testDuration,numberOfQuestions}=req.body;
+            const userPrompt=`
+            Objective: Generate a list of multiple-choice questions (MCQs) based on the provided text. The output must be a single, valid, unformatted, and complete JavaScript array of objects, ready for direct parsing and use in a web application.
+Output Format Constraint (Critical): The response must not contain any prose, explanations, or external text, only the final JavaScript array.
+JavaScript
+[
+  {
+    question: "...",
+    options: [
+      "...",
+      "...",
+      "...",
+      "..."
+    ],
+    correctAnswer: "..."
+  },
+  {
+    // ... next object
+  }
+]
+
+Content Guidelines:
+Number of Questions: Generate ${numberOfQuestions} high-quality, non-trivial MCQs from the text. 
+Question: The question field must be a string containing the full question.
+Options: The options field must be an array of strings containing exactly four distinct, plausible answer choices.
+Correct Answer: The correctAnswer field must be a string that exactly matches one of the strings in the options array.
+Example of the Desired Output (Do not include this example in the final output):
+JavaScript
+[
+  {
+    question: "What is the capital of France?",
+    options: [
+      "Berlin",
+      "Madrid",
+      "Paris",
+      "Rome"
+    ],
+    correctAnswer: "Paris"
+  }
+]
+
+Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly to the required JavaScript array format and containing only the code.
+
+            `
+
+            const response=await geminiAI.models.generateContent({
+              model:aiModelName,
+              contents:[
+                userPrompt,
+                {
+                  inlineData:{
+                    mimeType:fileMimeType,
+                    data:fileBase64
+                  }
+                }
+              ]
+            })
+
+            console.log("response is:",response);
+            return res.status(200).json({success:true,questions:response.text});
         }catch(error){
             return res.send(500).json({error:error});
         }
