@@ -1,8 +1,12 @@
 import express from 'express';
 import multer from 'multer';
+import { config } from 'dotenv';
 import { GoogleGenAI} from '@google/genai';
 
+	config();
+
   const geminiApiKey=process.env.GEMINI_API_KEY;
+  console.log("geminiApiKey:",geminiApiKey);
   const aiModelName='gemini-2.5-flash';
 
   const geminiAI=new GoogleGenAI({apiKey:geminiApiKey});
@@ -72,7 +76,7 @@ const mcqQuestions = [
 const router=express.Router();
     
 
-router.post('/',uploads.single('file-input'),async(req,res)=>{
+router.post('/',uploads.single('docFile'),async(req,res)=>{
         try{
             if(!req.file){
               res.status(400).json({error:'No document uploaded!'});
@@ -82,6 +86,9 @@ router.post('/',uploads.single('file-input'),async(req,res)=>{
             const fileBase64=fileBuffer.toString('base64');
             const fileMimeType=req.file.mimetype;
             const {testDuration,numberOfQuestions}=req.body;
+
+            console.log("numberOfQuestions:",numberOfQuestions)
+            console.log("fileBuffer:",fileBuffer);
             const userPrompt=`
             Objective: Generate a list of multiple-choice questions (MCQs) based on the provided text. The output must be a single, valid, unformatted, and complete JavaScript array of objects, ready for direct parsing and use in a web application.
 Output Format Constraint (Critical): The response must not contain any prose, explanations, or external text, only the final JavaScript array.
@@ -142,7 +149,8 @@ Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly
             console.log("response is:",response);
             return res.status(200).json({success:true,questions:response.text});
         }catch(error){
-            return res.send(500).json({error:error});
+            console.log("error is:",error);
+            return res.status(400).json({error:error});
         }
         
 })
