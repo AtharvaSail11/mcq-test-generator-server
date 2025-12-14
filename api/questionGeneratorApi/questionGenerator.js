@@ -71,6 +71,23 @@ const mcqQuestions = [
 ];
 
 
+const questionSchema={
+  type:'object',
+  properties:{
+    question:{type:'string'},
+    options:{
+      type:'array',
+      items:{type:'string'}
+    },
+    correctAnswer:{type:'string'}
+  }
+}
+
+const arraySchema={
+  type:'array',
+  items:questionSchema
+}
+
 
 
 const router=express.Router();
@@ -91,7 +108,7 @@ router.post('/',uploads.single('docFile'),async(req,res)=>{
             console.log("fileBuffer:",fileBuffer);
             const userPrompt=`
             Objective: Generate a list of multiple-choice questions (MCQs) based on the provided text. The output must be a single, valid, unformatted, and complete JavaScript array of objects, ready for direct parsing and use in a web application.
-Output Format Constraint (Critical): The response must not contain any prose, explanations, or external text, only the final JavaScript array.
+Output Format Constraint (Critical): The response must not contain any prose, explanations, or external text, only the final JavaScript array.Provide the questions array in JSON format.
 JavaScript
 [
   {
@@ -129,13 +146,15 @@ JavaScript
   }
 ]
 
-Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly to the required JavaScript array format and containing only the code.
+Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly to the provided JSON schema.
 
             `
 
+const simplePrompt='Describe this file'
+
             const response=await geminiAI.models.generateContent({
               model:aiModelName,
-              contents:[
+                contents:[
                 userPrompt,
                 {
                   inlineData:{
@@ -143,7 +162,18 @@ Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly
                     data:fileBase64
                   }
                 }
-              ]
+              ],
+              config:{
+                responseMimeType:'application/json',
+                responseSchema:{
+                  type:'object',
+                  properties:{
+                    questions:arraySchema
+                  }
+                },
+                required:['questionData']
+              },
+              maxOutputTokens: 32768
             })
 
             console.log("response is:",response);
