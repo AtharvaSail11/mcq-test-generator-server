@@ -1,21 +1,21 @@
 import express from 'express';
 import multer from 'multer';
 import { config } from 'dotenv';
-import { GoogleGenAI} from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 
-	config();
+config();
 
-  const geminiApiKey=process.env.GEMINI_API_KEY;
-  console.log("geminiApiKey:",geminiApiKey);
-  const aiModelName='gemini-2.5-flash';
+const geminiApiKey = process.env.GEMINI_API_KEY;
+// console.log("geminiApiKey:", geminiApiKey);
+const aiModelName = 'gemini-2.5-flash';
 
-  const geminiAI=new GoogleGenAI({apiKey:geminiApiKey});
+const geminiAI = new GoogleGenAI({ apiKey: geminiApiKey });
 
-  const storage=multer.memoryStorage();
-  const uploads=multer({
-    storage:storage,
-    limits:{fileSize:20*1024*1024}
-  });
+const storage = multer.memoryStorage();
+const uploads = multer({
+  storage: storage,
+  limits: { fileSize: 20 * 1024 * 1024 }
+});
 
 const mcqQuestions = [
   {
@@ -71,42 +71,43 @@ const mcqQuestions = [
 ];
 
 
-const questionSchema={
-  type:'object',
-  properties:{
-    question:{type:'string'},
-    options:{
-      type:'array',
-      items:{type:'string'}
+const questionSchema = {
+  type: 'object',
+  properties: {
+    question: { type: 'string' },
+    options: {
+      type: 'array',
+      items: { type: 'string' }
     },
-    correctAnswer:{type:'string'}
+    correctAnswer: { type: 'string' }
   }
 }
 
-const arraySchema={
-  type:'array',
-  items:questionSchema
+const arraySchema = {
+  type: 'array',
+  items: questionSchema
 }
 
 
 
-const router=express.Router();
-    
+const router = express.Router();
 
-router.post('/',uploads.single('docFile'),async(req,res)=>{
-        try{
-            if(!req.file){
-              res.status(400).json({error:'No document uploaded!'});
-            }
 
-            const fileBuffer=req.file.buffer;
-            const fileBase64=fileBuffer.toString('base64');
-            const fileMimeType=req.file.mimetype;
-            const {testDuration,numberOfQuestions}=req.body;
+router.post('/', uploads.single('docFile'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'No document uploaded!' });
+    }
 
-            console.log("numberOfQuestions:",numberOfQuestions)
-            console.log("fileBuffer:",fileBuffer);
-            const userPrompt=`
+    console.log('req.file:',req.file);
+    const fileBuffer = req.file.buffer;
+    const fileBase64 = fileBuffer.toString('base64');
+    const fileMimeType = req.file.mimetype;
+    const { testDuration, numberOfQuestions } = req.body;
+
+    console.log("numberOfQuestions:", numberOfQuestions)
+    console.log("fileBuffer:", fileBuffer);
+    const userPrompt = `
             Objective: Generate a list of multiple-choice questions (MCQs) based on the provided text. The output must be a single, valid, unformatted, and complete JavaScript array of objects, ready for direct parsing and use in a web application.
 Output Format Constraint (Critical): The response must not contain any prose, explanations, or external text, only the final JavaScript array.Provide the questions array in JSON format.
 JavaScript
@@ -146,43 +147,42 @@ JavaScript
   }
 ]
 
-Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly to the provided JSON schema.
+Final Instruction: Generate the ${numberOfQuestions} MCQs now, adhering strictly to the format given above. Return the Questions object in JSON format.
 
             `
 
-const simplePrompt='Describe this file'
+    const simplePrompt = 'Describe this file'
 
-            const response=await geminiAI.models.generateContent({
-              model:aiModelName,
-                contents:[
-                userPrompt,
-                {
-                  inlineData:{
-                    mimeType:fileMimeType,
-                    data:fileBase64
-                  }
-                }
-              ],
-              config:{
-                responseMimeType:'application/json',
-                responseSchema:{
-                  type:'object',
-                  properties:{
-                    questions:arraySchema
-                  }
-                },
-                required:['questionData']
-              },
-              maxOutputTokens: 32768
-            })
-
-            console.log("response is:",response);
-            return res.status(200).json({success:true,questions:response.text});
-        }catch(error){
-            console.log("error is:",error);
-            return res.status(400).json({error:error});
+    const response = await geminiAI.models.generateContent({
+      model: aiModelName,
+      contents: [
+        userPrompt,
+        {
+          inlineData: {
+            mimeType: fileMimeType,
+            data: fileBase64
+          }
         }
-        
+      ],
+    },{
+      retryConfig:{
+        maxRetries:0
+      }
+    })
+
+    console.log("response is:", response);
+    return res.status(200).json({ success: true, questions: response.text });
+  } catch (error) {
+    if (error.status === 503) {
+      console.log('gemini api is overloaded',error.message)
+      return res.status(503).json({ error })
+    } else {
+      console.log("error is:", error);
+      return res.status(400).json({ error: error });
+    }
+
+  }
+
 })
 
 export default router;
