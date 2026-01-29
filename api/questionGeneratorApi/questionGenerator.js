@@ -99,14 +99,14 @@ router.post('/', uploads.single('docFile'), async (req, res) => {
       res.status(400).json({ error: 'No document uploaded!' });
     }
 
-    console.log('req.file:',req.file);
+    // console.log('req.file:',req.file);
     const fileBuffer = req.file.buffer;
     const fileBase64 = fileBuffer.toString('base64');
     const fileMimeType = req.file.mimetype;
     const { testDuration, numberOfQuestions } = req.body;
 
-    console.log("numberOfQuestions:", numberOfQuestions)
-    console.log("fileBuffer:", fileBuffer);
+    // console.log("numberOfQuestions:", numberOfQuestions)
+    // console.log("fileBuffer:", fileBuffer);
     const userPrompt = `
 Generate ${numberOfQuestions} high-quality, non-trivial MCQs based on the attached file.
 
