@@ -9,3 +9,7 @@ And then sending the response JSON Data recieved from Gemini API to Frontend.
 -Here, I am using Gemini API free tier. So there are limited tokens per day which we can use.
 -Even with implementation of techniques to reduce Hallucination of AI, Still sometimes it Hallucinates (Although it is very rare currently)
 
+## Final Verdict
+
+That's all for now. There are some challenges but I am constantly learning and will Implement solutions in the upcoming time.
+
