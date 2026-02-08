@@ -152,8 +152,11 @@ Output Requirements:
   } catch (error) {
     if (error.status === 503) {
       console.log('gemini api is overloaded',error.message)
-      return res.status(503).json({ error })
-    } else {
+      return res.status(503).json({ error:'Gemini API is overloaded!' });
+    } else if(error.status === 429) {
+      console.log('gemini API daily limit exceeded!')
+      return res.status(429).json({ error:'Gemini api daily limit exceeded!' })
+    } else{
       console.log("error is:", error);
       return res.status(400).json({ error: error });
     }
