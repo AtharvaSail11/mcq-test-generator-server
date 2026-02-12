@@ -8,6 +8,15 @@
 
 	app.use('/api/generateQuestions',questionGenerator);
 
+	app.get('/serverPing',(req,res)=>{
+		try{
+			res.status(200).json({success:true,message:'Connection with server initiated!'})
+			console.log('Request recieved!');
+		}catch(error){
+			res.status(400).json({success:false,message:error.message});
+		}
+	});
+
 	app.get('/',(req,res)=>{
 	res.send("Hello from server!");
 	});
